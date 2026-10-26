@@ -11,6 +11,8 @@ import requests
 # We put these in another file because they're not super relevant to the
 # actual analysis that we want to do here.
 from _utils import Earthquake, EQDataset, read_cli_args
+from datetime import datetime, timezone
+from matplotlib import pyplot as plt
 
 
 def get_data(save: Path | None = None) -> EQDataset:
@@ -92,6 +94,69 @@ def get_maximum(data: EQDataset) -> tuple[float, list[float]]:
     strongest_earthquake = sorted_by_mag[-1]
     return get_magnitude(strongest_earthquake), get_location(strongest_earthquake)
 
+def get_frequncy_year(data):
+    """Get the number of earthquakes per year."""
+    frequency = {}
+    for earthquake in data['features']:
+        time = datetime.fromtimestamp(earthquake["properties"]["time"] / 1000, tz=timezone.utc)
+        year = time.year
+        if year not in frequency:
+            frequency[year] = 0
+        frequency[year] += 1
+    return frequency
+
+
+def average_magnitude_year(data):
+    """Get the average magnitude of earthquakes per year."""
+    magnitude_sum = {}
+    count = {}
+    for earthquake in data['features']:
+        time = datetime.fromtimestamp(earthquake["properties"]["time"] / 1000, tz=timezone.utc)
+        year = time.year
+        magnitude = earthquake['properties']['mag']
+        if year not in magnitude_sum:
+            magnitude_sum[year] = 0
+            count[year] = 0
+        magnitude_sum[year] += magnitude
+        count[year] += 1
+    average_magnitude = {year: magnitude_sum[year] / count[year] for year in magnitude_sum}
+    return average_magnitude
+
+
+def plot_earthquake_frequency(data):
+    """Plot the number of earthquakes per year."""
+    frequency = get_frequncy_year(data)
+    years = sorted(frequency.keys())
+    counts = [frequency[year] for year in years]
+
+    plt.figure(figsize=(10, 5))
+    plt.bar(years, counts)
+    plt.xlabel('Year')
+    plt.ylabel('Number of Earthquakes')
+    plt.title('Number of Earthquakes per Year')
+    plt.xticks(years, rotation=45)
+    
+    plt.tight_layout()
+
+    plt.show()
+    
+
+
+def plot_average_magnitude(data):
+    """Plot the average magnitude of earthquakes per year."""
+    average_magnitude = average_magnitude_year(data)
+    years = sorted(average_magnitude.keys())
+    magnitudes = [average_magnitude[year] for year in years]
+
+    plt.figure(figsize=(10, 5))
+    plt.plot(years, magnitudes, marker='o')
+    plt.xlabel('Year')
+    plt.ylabel('Average Magnitude')
+    plt.title('Average Magnitude of Earthquakes per Year')
+    plt.xticks(years, rotation=45)
+    plt.tight_layout()
+    plt.show()
+
 
 # With all the above functions defined, we can now call them and get the result
 if __name__ == "__main__":
@@ -104,3 +169,14 @@ if __name__ == "__main__":
     print(
         f"The strongest earthquake was at {max_location} with magnitude {max_magnitude}"
     )
+    plt.plot([1, 2, 3], [4, 5, 6], marker='o')
+    plt.title("Test Plot")
+    plt.show()
+
+    print("Starting first plot...")
+    plot_earthquake_frequency(data)
+    print("First plot finished.")
+
+    print("Starting second plot...")
+    plot_average_magnitude(data)
+    print("Second plot finished.")
